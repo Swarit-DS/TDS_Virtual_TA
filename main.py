@@ -55,6 +55,34 @@ Answer in JSON format:
             "links": [{"url": l, "text": "Related discussion"} for l in links[:2]]
         }
 
-@app.get("/")
+from fastapi.responses import HTMLResponse
+
+@app.get("/", response_class=HTMLResponse)
 def read_root():
-    return {"message": "TDS Virtual TA API is running"}
+    return """
+    <html>
+      <head>
+        <title>TDS Virtual TA API</title>
+      </head>
+      <body>
+        <h2>TDS Virtual TA API is Running ✅</h2>
+        <p>This API accepts a <code>POST</code> request at <code>/api/</code> with a JSON body.</p>
+
+        <h3>Example curl command:</h3>
+        <pre>
+curl -X POST https://tds-virtual-ta-byqp.onrender.com/api/ \\
+  -H "Content-Type: application/json" \\
+  -d '{"question": "Should I use gpt-3.5-turbo-0125 or gpt-4o-mini?"}'
+        </pre>
+
+        <h3>Example JSON body:</h3>
+        <pre>
+{
+  "question": "Should I use gpt-3.5-turbo-0125 or gpt-4o-mini?"
+}
+        </pre>
+
+        <p>Supported method: <strong>POST</strong> only on <code>/api/</code></p>
+      </body>
+    </html>
+    """
