@@ -1,42 +1,24 @@
-import os
-import json
-from dotenv import load_dotenv
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
-from openai import OpenAI, RateLimitError
-from json import JSONDecodeError
+from openai import OpenAI
 from scraper import scrape_discourse
+import os
+import json
 
-# Load environment variables
-load_dotenv()
-
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# Initialize FastAPI app
 app = FastAPI()
 
-# CORS Middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Request model
 class QuestionInput(BaseModel):
     question: str
     image: Optional[str] = None
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @app.post("/api/")
 async def ask(input: QuestionInput):
     question = input.question
     links = scrape_discourse()
-    context = "\n\n".join(links[:5])
+    context = "\n\n".join(links)
 
     prompt = f"""
 You are a teaching assistant helping students in the TDS course.
@@ -56,7 +38,7 @@ Answer in JSON format:
     {{"url": "<link2>", "text": "<summary2>"}}
   ]
 }}
-"""
+    """
 
     try:
         response = client.chat.completions.create(
@@ -64,20 +46,15 @@ Answer in JSON format:
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3
         )
-        content = response.choices[0].message.content
-        return json.loads(content)
+        assistant_reply = response.choices[0].message.content
+        return json.loads(assistant_reply)
 
-    except RateLimitError:
+    except Exception as e:
         return {
-            "answer": "OpenAI quota exceeded. Please try again later.",
-            "links": []
-        }
-    except JSONDecodeError:
-        return {
-            "answer": "Could not parse LLM response properly.",
-            "links": [{"url": link, "text": "Related discussion"} for link in links[:2]]
+            "answer": "Something went wrong. Please try again later.",
+            "links": [{"url": l, "text": "Related discussion"} for l in links[:2]]
         }
 
-@app.api_route("/", methods=["GET", "HEAD", "OPTIONS"])
-def root(request: Request):
+@app.get("/")
+def read_root():
     return {"message": "TDS Virtual TA API is running"}
