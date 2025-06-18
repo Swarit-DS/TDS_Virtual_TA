@@ -86,3 +86,13 @@ curl -X POST https://tds-virtual-ta-byqp.onrender.com/api/ \\
       </body>
     </html>
     """
+from fastapi.responses import JSONResponse
+
+@app.get("/api/")
+async def api_get_fallback():
+    return JSONResponse(
+        status_code=405,
+        content={
+            "error": "GET method not allowed on /api/. Use POST with a JSON body like {\"question\": \"...\"}"
+        }
+    )
