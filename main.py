@@ -1,14 +1,19 @@
 import os
+import json
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
-import openai
+from openai import OpenAI
+from json import JSONDecodeError
 from scraper import scrape_discourse
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Initialize FastAPI app
 app = FastAPI()
 
+# Request model
 class QuestionInput(BaseModel):
     question: str
     image: Optional[str] = None
@@ -40,25 +45,24 @@ Answer in JSON format:
 }}
 """
 
-    response = openai.ChatCompletion.create(
+    # Call OpenAI Chat API
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo-0125",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3
     )
 
-    # Extract JSON from LLM response
-    import json
-    from json import JSONDecodeError
-
     try:
         assistant_reply = response.choices[0].message.content
         parsed = json.loads(assistant_reply)
         return parsed
+
     except JSONDecodeError:
         return {
             "answer": "Could not parse LLM response properly.",
             "links": [{"url": l, "text": "Related discussion"} for l in links[:2]]
         }
+
 @app.get("/")
 def read_root():
     return {"message": "TDS Virtual TA API is running"}
