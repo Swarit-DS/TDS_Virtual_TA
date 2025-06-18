@@ -59,3 +59,6 @@ Answer in JSON format:
             "answer": "Could not parse LLM response properly.",
             "links": [{"url": l, "text": "Related discussion"} for l in links[:2]]
         }
+@app.get("/")
+def read_root():
+    return {"message": "TDS Virtual TA API is running"}
